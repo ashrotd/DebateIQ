@@ -1,4 +1,4 @@
-# Historical Debate Arena
+# DebateIQ Arena
 
 A full-stack web application for debating with AI-powered historical figures. Built with React (frontend) and FastAPI (backend), containerized using Docker and orchestrated with Docker Compose.
 

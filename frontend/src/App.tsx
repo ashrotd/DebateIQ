@@ -3,6 +3,7 @@ import Header from './components/Header'
 import FigureCard from './components/FigureCard'
 import LoadingSpinner from './components/LoadingSpinner'
 import ErrorMessage from './components/ErrorMessage'
+import DebateArena from './components/DebateArena'
 import { Figure, BackendStatus } from './types'
 import apiService from './services/api'
 
@@ -11,6 +12,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
+  const [selectedFigure, setSelectedFigure] = useState<Figure | null>(null);
 
   useEffect(() => {
     const testBackend = async () => {
@@ -34,8 +36,20 @@ function App() {
   }, []);
 
   const handleStartDebate = (figureId: string) => {
-    alert(`Debate feature coming soon! You selected ${figureId}`);
+    const figure = figures.find(f => f.id === figureId);
+    if (figure) {
+      setSelectedFigure(figure);
+    }
   };
+
+  const handleBackToSelection = () => {
+    setSelectedFigure(null);
+  };
+
+  // Show debate arena if figure is selected
+  if (selectedFigure) {
+    return <DebateArena figure={selectedFigure} onBack={handleBackToSelection} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 relative overflow-hidden">

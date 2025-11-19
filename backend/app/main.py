@@ -71,7 +71,7 @@ async def list_figures():
                 "title": "16th President of the United States",
                 "era": "1809-1865",
                 "specialty": "Democracy, Civil Rights, Unity",
-                "avatar": "🎩"
+                "image": "abraham.jpg"
             },
             {
                 "id": "tesla",
@@ -79,7 +79,7 @@ async def list_figures():
                 "title": "Inventor and Electrical Engineer",
                 "era": "1856-1943",
                 "specialty": "Innovation, Science, Future Technology",
-                "avatar": "⚡"
+                "image": "nicola.jpg"
             },
             {
                 "id": "hitler",
@@ -87,8 +87,7 @@ async def list_figures():
                 "title": "German Dictator (Historical Context Only)",
                 "era": "1889-1945",
                 "specialty": "Authoritarian Rhetoric, Propaganda",
-                "warning": "⚠️ For educational purposes only",
-                "avatar": "🎖️"
+                "image": "hitler.jpg",
             }
         ]
     }

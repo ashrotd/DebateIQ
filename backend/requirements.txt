@@ -1,0 +1,12 @@
+# FastAPI and ASGI server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# CORS and basic middleware
+python-multipart==0.0.6
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Testing (optional for now)
+httpx==0.26.0

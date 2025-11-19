@@ -1,12 +1,21 @@
-# FastAPI and ASGI server
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
+# FastAPI and ASGI server (upgraded for Google ADK compatibility)
+fastapi>=0.115.0
+uvicorn[standard]>=0.27.0
 
 # CORS and basic middleware
-python-multipart==0.0.6
+python-multipart>=0.0.6
 
 # Environment variables
-python-dotenv==1.0.1
+python-dotenv>=1.0.1
 
 # Testing (optional for now)
-httpx==0.26.0
+httpx>=0.26.0
+
+# Google Agent Development Kit (ADK) for multi-agent system
+google-adk==1.0.0
+
+# ADK missing dependencies (should be auto-installed but aren't)
+deprecated>=1.2.14
+
+# WebSocket support for real-time debate streaming
+websockets>=14.1

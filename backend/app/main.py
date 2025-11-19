@@ -1,10 +1,13 @@
 """
 Historical Debate Arena - FastAPI Backend
-Minimal starter version to test setup
+Multi-agent AI debate platform with Google ADK
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+
+from app.config import settings
+from app.api.routes import debates, websocket
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -12,23 +15,23 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Historical Debate Arena API",
-    description="AI-powered debate platform with historical figures",
-    version="1.0.0"
+    title=settings.api_title,
+    description="AI-powered debate platform with historical figures using Google ADK",
+    version=settings.api_version
 )
 
 # CORS middleware - allows frontend to communicate
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://frontend:3000"
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+app.include_router(debates.router)
+app.include_router(websocket.router)
 
 
 @app.get("/")

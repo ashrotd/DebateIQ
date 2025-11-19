@@ -4,15 +4,26 @@ import FigureCard from './components/FigureCard'
 import LoadingSpinner from './components/LoadingSpinner'
 import ErrorMessage from './components/ErrorMessage'
 import DebateArena from './components/DebateArena'
+import DebateSetup from './components/DebateSetup'
 import { Figure, BackendStatus } from './types'
 import apiService from './services/api'
+
+type AppView = 'selection' | 'setup' | 'debate';
+
+interface DebateConfig {
+  sessionId: string;
+  topic: string;
+  participants: string[];
+}
 
 function App() {
   const [figures, setFigures] = useState<Figure[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
-  const [selectedFigure, setSelectedFigure] = useState<Figure | null>(null);
+  const [currentView, setCurrentView] = useState<AppView>('selection');
+  const [debateConfig, setDebateConfig] = useState<DebateConfig | null>(null);
+  const [creatingDebate, setCreatingDebate] = useState(false);
 
   useEffect(() => {
     const testBackend = async () => {
@@ -35,22 +46,70 @@ function App() {
     fetchFigures();
   }, []);
 
-  const handleStartDebate = (figureId: string) => {
-    const figure = figures.find(f => f.id === figureId);
-    if (figure) {
-      setSelectedFigure(figure);
+  const handleSetupDebate = () => {
+    setCurrentView('setup');
+  };
+
+  const handleStartDebate = async (topic: string, participants: string[], maxTurns: number) => {
+    setCreatingDebate(true);
+    setError(null);
+
+    try {
+      // Create debate session
+      const response = await apiService.createDebate({
+        topic,
+        participants,
+        max_turns: maxTurns
+      });
+
+      setDebateConfig({
+        sessionId: response.session.id,
+        topic: response.session.topic,
+        participants: response.session.participants
+      });
+
+      setCurrentView('debate');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create debate');
+      setCurrentView('selection');
+    } finally {
+      setCreatingDebate(false);
     }
   };
 
   const handleBackToSelection = () => {
-    setSelectedFigure(null);
+    setCurrentView('selection');
+    setDebateConfig(null);
   };
 
-  // Show debate arena if figure is selected
-  if (selectedFigure) {
-    return <DebateArena figure={selectedFigure} onBack={handleBackToSelection} />;
+  const handleCancelSetup = () => {
+    setCurrentView('selection');
+  };
+
+  // Show debate arena if debate is active
+  if (currentView === 'debate' && debateConfig) {
+    return (
+      <DebateArena
+        sessionId={debateConfig.sessionId}
+        topic={debateConfig.topic}
+        participants={debateConfig.participants}
+        onBack={handleBackToSelection}
+      />
+    );
   }
 
+  // Show debate setup view
+  if (currentView === 'setup') {
+    return (
+      <DebateSetup
+        figures={figures}
+        onStartDebate={handleStartDebate}
+        onCancel={handleCancelSetup}
+      />
+    );
+  }
+
+  // Show figure selection view
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 relative overflow-hidden">
       {/* Animated background */}
@@ -66,17 +125,40 @@ function App() {
         <main className="container mx-auto px-4 py-12">
           {loading && <LoadingSpinner />}
           {error && <ErrorMessage message={error} />}
-          
-          {!loading && !error && (
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {figures.map((figure) => (
-                <FigureCard
-                  key={figure.id}
-                  figure={figure}
-                  onStartDebate={handleStartDebate}
-                />
-              ))}
+          {creatingDebate && (
+            <div className="text-center text-purple-300 mb-4">
+              <LoadingSpinner />
+              <p className="mt-4">Creating debate session...</p>
             </div>
+          )}
+
+          {!loading && !error && (
+            <>
+              <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4">
+                  Select Historical Figures for Your Debate
+                </h1>
+                <p className="text-slate-400 mb-6">
+                  Choose your participants and let AI agents engage in an intellectual battle
+                </p>
+                <button
+                  onClick={handleSetupDebate}
+                  className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
+                >
+                  Start New Debate
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                {figures.map((figure) => (
+                  <FigureCard
+                    key={figure.id}
+                    figure={figure}
+                    onStartDebate={() => handleSetupDebate()}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </main>
       </div>

@@ -55,7 +55,7 @@ function App() {
     setError(null);
 
     try {
-      // Create debate session
+      // Create debate session with Google ADK
       const response = await apiService.createDebate({
         topic,
         participants,
@@ -63,7 +63,7 @@ function App() {
       });
 
       setDebateConfig({
-        sessionId: response.session.id,
+        sessionId: response.session.session_id,
         topic: response.session.topic,
         participants: response.session.participants
       });

@@ -1,1 +1,26 @@
+# Environment files
+*.env
 .env
+backend/.env
+backend/app/.env
+
+# Google Cloud credentials
+backend/gcp-credentials.json
+backend/app/gcp-credentials.json
+gcp-credentials.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Generated audio files
+backend/app/static/audio/
+backend/app/static/audio/*
+
+# Keep the setup documentation files (they're helpful!)
+AI_VOICE_SETUP.md
+SETUP_TTS_CREDENTIALS.md
+VOICE_QUICK_START.md

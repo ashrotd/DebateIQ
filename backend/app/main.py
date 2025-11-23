@@ -4,6 +4,8 @@ Multi-agent AI debate platform with Google ADK
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import logging
 
 from app.config import settings
@@ -32,6 +34,11 @@ app.add_middleware(
 # Include API routes
 app.include_router(debates.router)
 app.include_router(websocket.router)
+
+# Mount static files for audio serving
+audio_dir = Path("app/static/audio")
+audio_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/audio", StaticFiles(directory=str(audio_dir)), name="audio")
 
 
 @app.get("/")

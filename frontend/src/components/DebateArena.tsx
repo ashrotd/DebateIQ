@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { DebateMessage } from "../types";
 import { apiService } from "../services/api";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 interface DebateArenaProps {
   sessionId: string;
   topic: string;
@@ -16,8 +18,11 @@ export default function DebateArena({ sessionId, topic, participants, onBack }: 
   const [error, setError] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,6 +31,50 @@ export default function DebateArena({ sessionId, topic, participants, onBack }: 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Play audio for a message
+  const playAudio = (audioUrl: string, messageId: string) => {
+    if (!voiceEnabled) return;
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    const audio = new Audio(`${API_BASE_URL}${audioUrl}`);
+    audioRef.current = audio;
+    setCurrentlyPlaying(messageId);
+
+    audio.play().catch((err) => {
+      console.error("Error playing audio:", err);
+      setCurrentlyPlaying(null);
+    });
+
+    audio.onended = () => {
+      setCurrentlyPlaying(null);
+      audioRef.current = null;
+    };
+  };
+
+  // Stop audio playback
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setCurrentlyPlaying(null);
+    }
+  };
+
+  // Auto-play audio for new AI messages
+  useEffect(() => {
+    if (voiceEnabled && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'participant' && lastMessage.audio_url && !currentlyPlaying) {
+        playAudio(lastMessage.audio_url, lastMessage.id);
+      }
+    }
+  }, [messages, voiceEnabled]);
 
   // Handler for sending user messages
   const handleSendMessage = async () => {
@@ -161,9 +210,24 @@ export default function DebateArena({ sessionId, topic, participants, onBack }: 
         </button>
 
         <div className="bg-slate-900/60 backdrop-blur-xl rounded-xl border border-purple-500/20 p-6">
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">
-            {topic}
-          </h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+              {topic}
+            </h1>
+            <button
+              onClick={() => {
+                setVoiceEnabled(!voiceEnabled);
+                if (voiceEnabled) stopAudio();
+              }}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                voiceEnabled
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                  : 'bg-slate-700 hover:bg-slate-600'
+              }`}
+            >
+              {voiceEnabled ? '🔊 Voice On' : '🔇 Voice Off'}
+            </button>
+          </div>
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <span>Participants:</span>
             {participants.map((p, i) => (
@@ -205,6 +269,20 @@ export default function DebateArena({ sessionId, topic, participants, onBack }: 
                 <span className="text-xs text-slate-500">
                   {msg.message_type} · Turn {msg.turn_number}
                 </span>
+                {msg.audio_url && msg.role === 'participant' && (
+                  <button
+                    onClick={() => {
+                      if (currentlyPlaying === msg.id) {
+                        stopAudio();
+                      } else {
+                        playAudio(msg.audio_url!, msg.id);
+                      }
+                    }}
+                    className="text-xs px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 rounded transition-all"
+                  >
+                    {currentlyPlaying === msg.id ? '⏸️ Stop' : '▶️ Play Voice'}
+                  </button>
+                )}
               </div>
               <div className={`rounded-xl px-4 py-3 ${getMessageStyle(msg.role)}`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>

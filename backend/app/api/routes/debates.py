@@ -9,7 +9,6 @@ from datetime import datetime
 
 from app.models import (
     CreateDebateRequest,
-    DebateResponse,
     DebateSession,
     FigureId
 )
@@ -17,16 +16,16 @@ from app.services.debate_orchestrator import debate_orchestrator
 
 router = APIRouter(prefix="/api/v1/debates", tags=["debates"])
 
-@router.post("/", response_model=DebateResponse)
+@router.post("/")
 async def create_debate(request: CreateDebateRequest):
     """
-    Create a new debate session.
+    Create a new debate session using Google ADK.
 
     Args:
         request: Debate creation request with topic, participants, and settings
 
     Returns:
-        DebateResponse with session details
+        Session details with session_id
     """
     try:
         if len(request.participants) < 1:
@@ -41,17 +40,17 @@ async def create_debate(request: CreateDebateRequest):
                 detail="Maximum 3 participants allowed per debate"
             )
 
-        # Create debate session
-        session = debate_orchestrator.create_session(
+        # Create debate session with Google ADK
+        session = await debate_orchestrator.create_session(
             topic=request.topic,
             participants=request.participants,
             max_turns=request.max_turns or 10
         )
 
-        return DebateResponse(
-            session=session,
-            message="Debate session created successfully. Use the session ID to start the debate."
-        )
+        return {
+            "session": session,
+            "message": "Debate session created successfully with Google ADK."
+        }
 
     except Exception as e:
         import traceback
@@ -159,12 +158,12 @@ async def send_user_message(session_id: str, message: dict):
     Returns:
         AI agent's response
     """
-    session = debate_orchestrator.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Debate session not found")
+    # session = debate_orchestrator.get_session(session_id)
+    # if not session:
+    #     raise HTTPException(status_code=404, detail="Debate session not found")
 
-    if session.status == "completed":
-        raise HTTPException(status_code=400, detail="Debate already completed")
+    # if session.status == "completed":
+    #     raise HTTPException(status_code=400, detail="Debate already completed")
 
     user_content = message.get("content", "")
     if not user_content:
@@ -183,10 +182,11 @@ async def send_user_message(session_id: str, message: dict):
                 "timestamp": datetime.now().isoformat()
             },
             "ai_response": {
-                "id": response_message.id,
-                "speaker_name": response_message.speaker_name,
-                "content": response_message.content,
-                "timestamp": response_message.timestamp.isoformat()
+                "id": response_message["id"],
+                "speaker_name": response_message["speaker_name"],
+                "content": response_message["content"],
+                "timestamp": response_message["timestamp"]
+
             }
         }
     except Exception as e:

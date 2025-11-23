@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     # Google API Configuration
     google_api_key: str = os.getenv("GOOGLE_API_KEY", "")
+    google_application_credentials: Optional[str] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", None)
 
     # Application Settings
     app_env: str = os.getenv("APP_ENV", "development")

@@ -23,18 +23,21 @@ export interface DebateMessage {
   content: string;
   timestamp: string;
   turn_number: number;
+  audio_url?: string;  // URL to audio file for AI voice
 }
 
 export interface DebateSession {
-  id: string;
+  id?: string;
+  session_id?: string;
   topic: string;
   participants: string[];
-  status: 'waiting' | 'active' | 'completed';
-  created_at: string;
-  updated_at: string;
-  messages: DebateMessage[];
-  current_turn: number;
-  max_turns: number;
+  participant_name?: string;
+  status?: 'waiting' | 'active' | 'completed';
+  created_at?: string;
+  updated_at?: string;
+  messages?: DebateMessage[];
+  current_turn?: number;
+  max_turns?: number;
 }
 
 export interface CreateDebateRequest {
@@ -60,4 +63,5 @@ export interface StreamedDebateMessage {
   timestamp?: string;
   turn_number?: number;
   message?: string;
+  audio_url?: string;  // URL to audio file for AI voice
 }

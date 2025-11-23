@@ -39,6 +39,7 @@ class DebateMessage(BaseModel):
     content: str
     timestamp: datetime
     turn_number: int
+    audio_url: Optional[str] = None  # URL to audio file for text-to-speech
 
 class DebateSession(BaseModel):
     """A debate session."""
@@ -60,7 +61,7 @@ class CreateDebateRequest(BaseModel):
 
 class DebateResponse(BaseModel):
     """Response containing debate information."""
-    session: DebateSession
+    # session: DebateSession
     message: str
 
 class StreamedMessage(BaseModel):
@@ -71,3 +72,4 @@ class StreamedMessage(BaseModel):
     content: str
     type: str  # 'message', 'status', 'error', 'complete'
     timestamp: datetime
+    audio_url: Optional[str] = None  # URL to audio file for text-to-speech

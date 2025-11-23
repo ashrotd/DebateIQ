@@ -1,33 +1,38 @@
-version: '3.8'
+  version: '3.8'
 
-services:
-  # FastAPI Backend
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: debate_backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    environment:
-      - PYTHONUNBUFFERED=1
-    restart: unless-stopped
+  services:
+    # FastAPI Backend
+    backend:
+      build:
+        context: ./backend
+        dockerfile: Dockerfile
+      container_name: debate_backend
+      ports:
+        - "8000:8000"
+      volumes:
+        - ./backend:/app
+        - ./backend/gcp-credentials.json:/app/gcp-credentials.json:ro
 
-  # React Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: debate_frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    depends_on:
-      - backend
-    restart: unless-stopped
+      environment:
+        - PYTHONUNBUFFERED=1
+        - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+        - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+      
+      restart: unless-stopped
+
+    # React Frontend
+    frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      container_name: debate_frontend
+      ports:
+        - "3000:3000"
+      volumes:
+        - ./frontend:/app
+        - /app/node_modules
+      environment:
+        - VITE_API_URL=http://localhost:8000
+      depends_on:
+        - backend
+      restart: unless-stopped

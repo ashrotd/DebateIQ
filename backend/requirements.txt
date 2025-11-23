@@ -19,3 +19,6 @@ deprecated>=1.2.14
 
 # WebSocket support for real-time debate streaming
 websockets>=14.1
+
+# Google Cloud Text-to-Speech for AI voices
+google-cloud-texttospeech>=2.14.0

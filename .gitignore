@@ -3,7 +3,7 @@
 .env
 backend/.env
 backend/app/.env
-
+backend/app/__pycache__/*
 # Google Cloud credentials
 backend/gcp-credentials.json
 backend/app/gcp-credentials.json

@@ -31,11 +31,21 @@ export default function FigureCard({ figure, onStartDebate }: FigureCardProps) {
         {/* Image */}
         <div className="relative mb-6">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center border-2 border-purple-500/30 group-hover:border-purple-500 transition-all duration-300">
-            <img
-              src={new URL(`../assets/figures/${figure.image}`, import.meta.url).href}
-              alt={figure.name}
-              className="w-24 h-24 rounded-full object-cover"
-            />
+            {figure.image === 'custom_figure.jpg' ? (
+              // Custom figure with initials
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <span className="text-3xl font-bold text-white">
+                  {figure.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              // Default figures with actual images
+              <img
+                src={new URL(`../assets/figures/${figure.image}`, import.meta.url).href}
+                alt={figure.name}
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            )}
           </div>
           {/* Floating badge */}
           <div className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">

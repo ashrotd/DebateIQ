@@ -9,7 +9,7 @@ from pathlib import Path
 import logging
 
 from app.config import settings
-from app.api.routes import debates, websocket
+from app.api.routes import debates, websocket, custom_figures
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +34,7 @@ app.add_middleware(
 # Include API routes
 app.include_router(debates.router)
 app.include_router(websocket.router)
+app.include_router(custom_figures.router)
 
 # Mount static files for audio serving
 audio_dir = Path("app/static/audio")
@@ -72,34 +73,59 @@ async def test_endpoint():
 
 @app.get("/api/v1/figures")
 async def list_figures():
-    """List available historical figures"""
+    """List available historical figures (both default and custom)"""
+    from app.services.custom_figure_store import custom_figure_store
+
+    # Default figures
+    default_figures = [
+        {
+            "id": "lincoln",
+            "name": "Abraham Lincoln",
+            "title": "16th President of the United States",
+            "era": "1809-1865",
+            "specialty": "Democracy, Civil Rights, Unity",
+            "image": "abraham.jpg",
+            "is_custom": False
+        },
+        {
+            "id": "tesla",
+            "name": "Nikola Tesla",
+            "title": "Inventor and Electrical Engineer",
+            "era": "1856-1943",
+            "specialty": "Innovation, Science, Future Technology",
+            "image": "nicola.jpg",
+            "is_custom": False
+        },
+        {
+            "id": "hitler",
+            "name": "Adolf Hitler",
+            "title": "German Dictator (Historical Context Only)",
+            "era": "1889-1945",
+            "specialty": "Authoritarian Rhetoric, Propaganda",
+            "image": "hitler.jpg",
+            "is_custom": False
+        }
+    ]
+
+    # Get custom figures
+    custom_figures = custom_figure_store.list_figures()
+
+    # Format custom figures to match the response structure
+    formatted_custom_figures = [
+        {
+            "id": fig["id"],
+            "name": fig["name"],
+            "title": fig["specialty"],
+            "era": fig["era"],
+            "specialty": fig["specialty"],
+            "image": "custom_figure.jpg",  # Default image for custom figures
+            "is_custom": True
+        }
+        for fig in custom_figures
+    ]
+
     return {
-        "figures": [
-            {
-                "id": "lincoln",
-                "name": "Abraham Lincoln",
-                "title": "16th President of the United States",
-                "era": "1809-1865",
-                "specialty": "Democracy, Civil Rights, Unity",
-                "image": "abraham.jpg"
-            },
-            {
-                "id": "tesla",
-                "name": "Nikola Tesla",
-                "title": "Inventor and Electrical Engineer",
-                "era": "1856-1943",
-                "specialty": "Innovation, Science, Future Technology",
-                "image": "nicola.jpg"
-            },
-            {
-                "id": "hitler",
-                "name": "Adolf Hitler",
-                "title": "German Dictator (Historical Context Only)",
-                "era": "1889-1945",
-                "specialty": "Authoritarian Rhetoric, Propaganda",
-                "image": "hitler.jpg",
-            }
-        ]
+        "figures": default_figures + formatted_custom_figures
     }
 
 

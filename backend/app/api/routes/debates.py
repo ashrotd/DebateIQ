@@ -1,11 +1,12 @@
 """
 Debate API Routes - Endpoints for creating and managing debates.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from typing import List
 import json
 from datetime import datetime
+from app.services.tts_service import tts_service
 
 from app.models import (
     CreateDebateRequest,
@@ -88,62 +89,60 @@ async def list_debates():
     return debate_orchestrator.list_sessions()
 
 
-@router.get("/{session_id}/start")
-async def start_debate(session_id: str):
+@router.post("/{session_id}/voice-message")
+async def send_voice_message(
+    session_id: str,
+    audio: UploadFile = File(...)
+):
     """
-    Start a debate and stream messages in real-time using Server-Sent Events (SSE).
+    Receive user's voice message, transcribe it using Google Speech-to-Text,
+    and get AI response.
 
     Args:
         session_id: The debate session ID
+        audio: Audio file (webm format from browser)
 
     Returns:
-        StreamingResponse with debate messages as they are generated
+        User's transcribed message and AI agent's response
     """
-    session = debate_orchestrator.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Debate session not found")
+    try:
+        # Read audio file
+        audio_content = await audio.read()
+        
+        # Transcribe audio using Google Speech-to-Text
+        transcribed_text = await tts_service.transcribe_audio(audio_content)
+        
+        if not transcribed_text:
+            raise HTTPException(
+                status_code=400, 
+                detail="Could not transcribe audio. Please try again."
+            )
 
-    if session.status == "completed":
-        raise HTTPException(status_code=400, detail="Debate already completed")
+        # Get AI response for transcribed message
+        response_message = await debate_orchestrator.send_user_message(
+            session_id,
+            transcribed_text
+        )
 
-    if session.status == "active":
-        raise HTTPException(status_code=400, detail="Debate already in progress")
-
-    async def event_generator():
-        """Generate Server-Sent Events for debate messages."""
-        try:
-            async for message in debate_orchestrator.start_debate(session_id):
-                # Format as SSE
-                data = {
-                    "id": message.id,
-                    "session_id": message.session_id,
-                    "speaker_id": message.speaker_id,
-                    "speaker_name": message.speaker_name,
-                    "role": message.role.value,
-                    "message_type": message.message_type.value,
-                    "content": message.content,
-                    "timestamp": message.timestamp.isoformat(),
-                    "turn_number": message.turn_number
-                }
-
-                yield f"data: {json.dumps(data)}\n\n"
-
-            # Send completion event
-            yield f"data: {json.dumps({'type': 'complete', 'message': 'Debate completed'})}\n\n"
-
-        except Exception as e:
-            error_data = {"type": "error", "message": str(e)}
-            yield f"data: {json.dumps(error_data)}\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
+        return {
+            "user_message": {
+                "content": transcribed_text,
+                "timestamp": datetime.now().isoformat()
+            },
+            "ai_response": {
+                "id": response_message["id"],
+                "speaker_name": response_message["speaker_name"],
+                "content": response_message["content"],
+                "timestamp": response_message["timestamp"],
+                "audio_url": response_message.get("audio_url")
+            }
         }
-    )
+        
+    except Exception as e:
+        import traceback
+        error_detail = f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(f"ERROR in send_voice_message: {error_detail}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{session_id}/message")
@@ -182,10 +181,11 @@ async def send_user_message(session_id: str, message: dict):
                 "timestamp": datetime.now().isoformat()
             },
             "ai_response": {
-                "id": response_message["id"],
+                "id": response_message["id"],   
                 "speaker_name": response_message["speaker_name"],
                 "content": response_message["content"],
-                "timestamp": response_message["timestamp"]
+                "timestamp": response_message["timestamp"],
+                "audio_url": response_message.get("audio_url")
 
             }
         }

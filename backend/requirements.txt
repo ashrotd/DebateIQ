@@ -22,3 +22,19 @@ websockets>=14.1
 
 # Google Cloud Text-to-Speech for AI voices
 google-cloud-texttospeech>=2.14.0
+
+# Google Cloud Speech-to-Text for voice input
+google-cloud-speech>=2.20.0
+
+# LangChain for RAG (Retrieval Augmented Generation)
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+langchain-huggingface>=0.1.0
+
+# Vector store and embeddings for RAG
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.0
+
+# Wikipedia loader for custom figures
+wikipedia>=1.4.0

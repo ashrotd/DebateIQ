@@ -4,7 +4,9 @@ import {
   CreateDebateResponse,
   DebateSession,
   DebateMessage,
-  StreamedDebateMessage
+  StreamedDebateMessage,
+  CreateCustomFigureRequest,
+  CustomFigureResponse
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -36,6 +38,58 @@ class ApiService {
       return data.figures;
     } catch (error) {
       console.error('Failed to fetch figures:', error);
+      throw error;
+    }
+  }
+
+  // Custom Figure Management Methods
+
+  async createCustomFigure(request: CreateCustomFigureRequest): Promise<CustomFigureResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/figures/custom/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to create custom figure:', error);
+      throw error;
+    }
+  }
+
+  async listCustomFigures(): Promise<Figure[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/figures/custom/`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to list custom figures:', error);
+      throw error;
+    }
+  }
+
+  async deleteCustomFigure(figureId: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/figures/custom/${figureId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete custom figure:', error);
       throw error;
     }
   }

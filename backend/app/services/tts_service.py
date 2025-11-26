@@ -9,6 +9,11 @@ from typing import Optional
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 import logging
+from fastapi import APIRouter, HTTPException, File, UploadFile, Form
+from datetime import datetime
+from google.cloud import speech_v1p1beta1 as speech
+
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,9 @@ class TTSService:
         """Initialize the TTS service."""
         self.client = None
         self._client_initialized = False
-        # Create audio directory if it doesn't exist
+        self._speech_client_initialized = False
+
+        # Create audio directory
         self.audio_dir = Path("app/static/audio")
         self.audio_dir.mkdir(parents=True, exist_ok=True)
 
@@ -67,18 +74,15 @@ class TTSService:
         """Lazy initialization of the TTS client."""
         if not self._client_initialized:
             try:
-                # Try to get credentials from environment or service account file
                 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
                 if credentials_path and os.path.exists(credentials_path):
-                    # Use service account credentials from file
                     credentials = service_account.Credentials.from_service_account_file(
                         credentials_path
                     )
                     self.client = texttospeech.TextToSpeechClient(credentials=credentials)
                     logger.info("Google Cloud TTS client initialized with service account")
                 else:
-                    # Try default credentials (ADC)
                     self.client = texttospeech.TextToSpeechClient()
                     logger.info("Google Cloud TTS client initialized with default credentials")
 
@@ -87,8 +91,30 @@ class TTSService:
                 logger.error(f"Failed to initialize TTS client: {e}")
                 logger.warning("TTS features will be disabled. See AI_VOICE_SETUP.md for setup instructions.")
                 logger.info("You need a Google Cloud Service Account with Text-to-Speech API enabled.")
-                self._client_initialized = True  # Don't retry every time
+                self._client_initialized = True  
                 self.client = None
+    def _initialize_speech_client(self):
+        """Lazy initialization of the Speech-to-Text client."""
+        if not self._speech_client_initialized:
+            try:
+                credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+                if credentials_path and os.path.exists(credentials_path):
+                    credentials = service_account.Credentials.from_service_account_file(
+                        credentials_path
+                    )
+                    self.speech_client = speech.SpeechClient(credentials=credentials)
+                    logger.info("Google Cloud Speech-to-Text client initialized with service account")
+                else:
+                    self.speech_client = speech.SpeechClient()
+                    logger.info("Google Cloud Speech-to-Text client initialized with default credentials")
+
+                self._speech_client_initialized = True
+            except Exception as e:
+                logger.error(f"Failed to initialize Speech-to-Text client: {e}")
+                logger.warning("Speech-to-Text features will be disabled.")
+                self._speech_client_initialized = True
+                self.speech_client = None
 
     def _get_cache_filename(self, text: str, speaker_id: str) -> str:
         """Generate a cache filename based on text and speaker."""
@@ -107,10 +133,8 @@ class TTSService:
             Relative path to the generated audio file, or None if generation failed
         """
         try:
-            # Initialize client if needed
             self._initialize_client()
 
-            # If client initialization failed, return None
             if self.client is None:
                 logger.warning("TTS client not available, skipping audio generation")
                 return None
@@ -170,6 +194,51 @@ class TTSService:
             logger.info("Audio cache cleared")
         except Exception as e:
             logger.error(f"Error clearing cache: {e}")
+
+    async def transcribe_audio(self,audio_content: bytes) -> str:
+        """
+        Transcribe audio using Google Speech-to-Text API.
+        
+        Args:
+            audio_content: Raw audio bytes
+            
+        Returns:
+            Transcribed text
+        """
+        try:
+            # Initialize the Speech client
+            self._initialize_speech_client()
+            if self.speech_client is None:
+                raise Exception("Speech-to-Text client not available")
+            
+            # Configure audio settings
+            audio = speech.RecognitionAudio(content=audio_content)
+            
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+                sample_rate_hertz=48000,  # Common for browser recordings
+                language_code="en-US",
+                enable_automatic_punctuation=True,
+                model="latest_long",  # Better for conversational speech
+            )
+
+            # Perform the transcription
+            response = self.speech_client.recognize(config=config, audio=audio)
+
+            # Extract transcribed text
+            transcripts = []
+            for result in response.results:
+                transcripts.append(result.alternatives[0].transcript)
+
+            transcribed_text = " ".join(transcripts)
+            print(f"Transcribed text: {transcribed_text}")
+            
+            return transcribed_text.strip()
+
+        except Exception as e:
+            print(f"Error transcribing audio: {e}")
+            raise Exception(f"Transcription failed: {str(e)}")
+
 
 
 # Global TTS service instance

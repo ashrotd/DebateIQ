@@ -1,0 +1,15 @@
+{
+  "king_mahendra": {
+    "id": "king_mahendra",
+    "name": "King Mahendra",
+    "topic": "Mahendra of Nepal",
+    "related_topics": [
+      "Panchayat Nepal",
+      "Democracy"
+    ],
+    "specialty": "Nepalese monarch",
+    "era": "1920",
+    "is_custom": true,
+    "created_at": null
+  }
+}

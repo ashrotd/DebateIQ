@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from app.models import FigureId
 from app.agents.lincoln_agent import lincoln_agent
 from app.agents.tesla_agent import tesla_agent
 from app.agents.hitler_agent import hitler_agent
+from app.services.custom_figure_store import custom_figure_store
+from app.agents.custom_agent_factory import CustomAgentFactory
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
@@ -41,24 +43,77 @@ class DebateOrchestrator:
         # Map to store runner and session info per debate session
         self.debate_sessions: Dict[str, Dict] = {}
 
+    def _get_agent_info(self, participant_id: str) -> Dict:
+        """
+        Get agent info for a participant (default or custom).
+
+        Args:
+            participant_id: Figure ID (e.g., "lincoln" or "king-mahendra")
+
+        Returns:
+            Dict with agent and name
+        """
+        # Check if it's a default figure
+        try:
+            figure_enum = FigureId(participant_id)
+            return self.agent_map[figure_enum]
+        except (ValueError, KeyError):
+            pass
+
+        # Check if it's a custom figure
+        custom_agent = custom_figure_store.get_agent(participant_id)
+        if custom_agent:
+            return {
+                "agent": custom_agent["agent"],
+                "name": custom_agent["figure_name"],
+                "is_custom": True,
+                "agent_data": custom_agent  # Full agent data for RAG
+            }
+
+        # If not found, try to load it
+        figure_data = custom_figure_store.get_figure(participant_id)
+        if figure_data:
+            logger.info(f"Loading custom agent for {participant_id}")
+            agent_data = CustomAgentFactory.create_agent(
+                figure_name=figure_data["name"],
+                figure_id=figure_data["id"],
+                topic=figure_data["topic"],
+                related_topics=figure_data["related_topics"],
+                specialty=figure_data["specialty"]
+            )
+            custom_figure_store.register_agent(participant_id, agent_data)
+            return {
+                "agent": agent_data["agent"],
+                "name": agent_data["figure_name"],
+                "is_custom": True,
+                "agent_data": agent_data
+            }
+
+        raise ValueError(f"Unknown figure: {participant_id}")
+
     async def create_session(
         self,
         topic: str,
-        participants: List[FigureId],
+        participants: List,  # Can be List[FigureId] or List[str]
         max_turns: int = 10
     ) -> Dict:
         """Create a new debate session with Google ADK."""
         session_id = str(uuid.uuid4())
 
-        # Get the first participant's agent
-        participant_id = participants[0]
-        agent_info = self.agent_map[participant_id]
+        # Convert participants to string IDs
+        participant_ids = [
+            p.value if isinstance(p, FigureId) else p
+            for p in participants
+        ]
+
+        # Get the first participant's agent (supports custom agents)
+        participant_id = participant_ids[0]
+        agent_info = self._get_agent_info(participant_id)
         agent = agent_info["agent"]
         agent_name = agent_info["name"]
-        self.session_service = InMemorySessionService()
+        is_custom = agent_info.get("is_custom", False)
 
-        # Store participants list for TTS voice selection
-        session_participants = participants
+        self.session_service = InMemorySessionService()
 
         # Create a runner for this agent
         runner = Runner(
@@ -78,9 +133,11 @@ class DebateOrchestrator:
         self.debate_sessions[session_id] = {
             "id": session_id,
             "topic": topic,
-            "participants": [p.value for p in participants],
-            "participant_enums": session_participants,  # Store enum objects for voice selection
+            "participants": participant_ids,
+            "participant_id": participant_id,
             "participant_name": agent_name,
+            "is_custom": is_custom,
+            "agent_info": agent_info,  # Store full agent info including RAG data
             "runner": runner,
             "adk_session": adk_session,
             "max_turns": max_turns,
@@ -90,7 +147,7 @@ class DebateOrchestrator:
         return {
             "session_id": session_id,
             "topic": topic,
-            "participants": [p.value for p in participants],
+            "participants": participant_ids,
             "participant_name": agent_name
         }
 
@@ -120,11 +177,21 @@ class DebateOrchestrator:
         runner = session_data["runner"]
         topic = session_data["topic"]
         participant_name = session_data["participant_name"]
-        participants = session_data.get("participant_enums", [])
+        participant_id = session_data["participant_id"]
+        is_custom = session_data.get("is_custom", False)
+        agent_info = session_data.get("agent_info", {})
+
+        # For custom agents with RAG, update context before generating response
+        if is_custom and "agent_data" in agent_info:
+            logger.info(f"Updating RAG context for custom agent: {participant_name}")
+            CustomAgentFactory.update_agent_context(
+                agent_info["agent_data"],
+                user_content
+            )
 
         # Create prompt that includes the debate topic
-        prompt = f"""You are debating the topic: '{topic}' 
-        User's message: {user_content} 
+        prompt = f"""You are debating the topic: '{topic}'
+        User's message: {user_content}
         Please respond to the user's argument with your perspective on this topic. Stay in character and engage directly with their points."""
 
         # Create message content
@@ -135,7 +202,7 @@ class DebateOrchestrator:
 
         # Get AI response using Google ADK
         response_text = ""
-        print(f"\n[DEBUG] Sending to {participant_name}: {user_content}")
+        logger.info(f"Sending to {participant_name}: {user_content}")
 
         async for event in runner.run_async(
             user_id=self.USER_ID,
@@ -151,14 +218,12 @@ class DebateOrchestrator:
             elif hasattr(event, 'text') and event.text:
                 response_text += event.text
 
-        print(f"[DEBUG] {participant_name} responded: {response_text[:100]}...")
+        logger.info(f"{participant_name} responded: {response_text[:100]}...")
 
         # Generate audio for the AI response
         audio_url = None
         try:
-            # Use the first participant's ID for voice selection
-            speaker_id = participants[0].value if participants else "default"
-            audio_url = tts_service.generate_speech(response_text.strip(), speaker_id)
+            audio_url = tts_service.generate_speech(response_text.strip(), participant_id)
             logger.info(f"Generated audio URL: {audio_url}")
         except Exception as e:
             logger.error(f"Failed to generate audio: {e}")

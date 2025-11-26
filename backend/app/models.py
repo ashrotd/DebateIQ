@@ -2,7 +2,7 @@
 Data models for DebateIQ application.
 """
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 
@@ -11,6 +11,27 @@ class FigureId(str, Enum):
     LINCOLN = "lincoln"
     TESLA = "tesla"
     HITLER = "hitler"
+
+
+class CreateCustomFigureRequest(BaseModel):
+    """Request to create a custom historical figure with RAG."""
+    figure_name: str = Field(..., min_length=1, description="Display name of the historical figure")
+    topic: str = Field(..., min_length=1, description="Main Wikipedia topic for RAG")
+    related_topics: List[str] = Field(default=[], description="Related Wikipedia topics for context")
+    specialty: Optional[str] = Field(None, description="Brief description of expertise")
+    era: Optional[str] = Field(None, description="Historical era or time period")
+
+
+class CustomFigureResponse(BaseModel):
+    """Response for custom figure creation."""
+    id: str
+    name: str
+    topic: str
+    related_topics: List[str]
+    specialty: str
+    era: str
+    is_custom: bool
+    message: str
 
 class DebateRole(str, Enum):
     """Roles in a debate."""
@@ -56,7 +77,7 @@ class DebateSession(BaseModel):
 class CreateDebateRequest(BaseModel):
     """Request to create a new debate."""
     topic: str
-    participants: List[FigureId]
+    participants: List[str]  # Can be FigureId values or custom figure IDs
     max_turns: Optional[int] = 10
 
 class DebateResponse(BaseModel):

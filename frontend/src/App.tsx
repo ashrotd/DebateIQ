@@ -5,10 +5,11 @@ import LoadingSpinner from './components/LoadingSpinner'
 import ErrorMessage from './components/ErrorMessage'
 import DebateArena from './components/DebateArena'
 import DebateSetup from './components/DebateSetup'
+import CreateCustomFigure from './components/CreateCustomFigure'
 import { Figure, BackendStatus } from './types'
 import apiService from './services/api'
 
-type AppView = 'selection' | 'setup' | 'debate';
+type AppView = 'selection' | 'setup' | 'debate' | 'create-custom';
 
 interface DebateConfig {
   sessionId: string;
@@ -86,6 +87,35 @@ function App() {
     setCurrentView('selection');
   };
 
+  const handleCreateCustomFigure = () => {
+    setCurrentView('create-custom');
+  };
+
+  const handleCustomFigureCreated = async () => {
+    // Refresh figures list
+    try {
+      const fetchedFigures = await apiService.getFigures();
+      setFigures(fetchedFigures);
+    } catch (err) {
+      console.error('Error refreshing figures:', err);
+    }
+    setCurrentView('selection');
+  };
+
+  const handleCancelCustomFigure = () => {
+    setCurrentView('selection');
+  };
+
+  // Show custom figure creation view
+  if (currentView === 'create-custom') {
+    return (
+      <CreateCustomFigure
+        onFigureCreated={handleCustomFigureCreated}
+        onCancel={handleCancelCustomFigure}
+      />
+    );
+  }
+
   // Show debate arena if debate is active
   if (currentView === 'debate' && debateConfig) {
     return (
@@ -141,12 +171,20 @@ function App() {
                 <p className="text-slate-400 mb-6">
                   Choose your participants and let AI agents engage in an intellectual battle
                 </p>
-                <button
-                  onClick={handleSetupDebate}
-                  className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
-                >
-                  Start New Debate
-                </button>
+                <div className="flex justify-center space-x-4">
+                  <button
+                    onClick={handleSetupDebate}
+                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
+                  >
+                    Start New Debate
+                  </button>
+                  <button
+                    onClick={handleCreateCustomFigure}
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/30"
+                  >
+                    Create Custom Figure
+                  </button>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">

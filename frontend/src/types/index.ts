@@ -6,6 +6,26 @@ export interface Figure {
   specialty: string;
   image: string;
   warning?: string;
+  is_custom?: boolean;
+}
+
+export interface CreateCustomFigureRequest {
+  figure_name: string;
+  topic: string;
+  related_topics: string[];
+  specialty?: string;
+  era?: string;
+}
+
+export interface CustomFigureResponse {
+  id: string;
+  name: string;
+  topic: string;
+  related_topics: string[];
+  specialty: string;
+  era: string;
+  is_custom: boolean;
+  message: string;
 }
 
 export type BackendStatus = 'checking' | 'connected' | 'disconnected';

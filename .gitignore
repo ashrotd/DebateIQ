@@ -22,5 +22,4 @@ backend/app/static/audio/*
 
 # Keep the setup documentation files (they're helpful!)
 AI_VOICE_SETUP.md
-SETUP_TTS_CREDENTIALS.md
 VOICE_QUICK_START.md

@@ -129,7 +129,7 @@ Setup is straightforward:
 1. Clone the repo
 2. Add your API keys to `.env` files
 3. Run `docker-compose up`
-4. Open localhost:5173
+4. Open localhost:3000
 
 Then go argue with history.
 

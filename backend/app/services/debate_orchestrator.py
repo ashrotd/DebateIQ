@@ -44,16 +44,7 @@ class DebateOrchestrator:
         self.debate_sessions: Dict[str, Dict] = {}
 
     def _get_agent_info(self, participant_id: str) -> Dict:
-        """
-        Get agent info for a participant (default or custom).
-
-        Args:
-            participant_id: Figure ID (e.g., "lincoln" or "king-mahendra")
-
-        Returns:
-            Dict with agent and name
-        """
-        # Check if it's a default figure
+       
         try:
             figure_enum = FigureId(participant_id)
             return self.agent_map[figure_enum]
@@ -70,7 +61,6 @@ class DebateOrchestrator:
                 "agent_data": custom_agent  # Full agent data for RAG
             }
 
-        # If not found, try to load it
         figure_data = custom_figure_store.get_figure(participant_id)
         if figure_data:
             logger.info(f"Loading custom agent for {participant_id}")
@@ -94,10 +84,10 @@ class DebateOrchestrator:
     async def create_session(
         self,
         topic: str,
-        participants: List,  # Can be List[FigureId] or List[str]
-        max_turns: int = 10
+        participants: List,
+        max_turns: int = 10,
+        mode: str = "user-vs-figure"
     ) -> Dict:
-        """Create a new debate session with Google ADK."""
         session_id = str(uuid.uuid4())
 
         # Convert participants to string IDs
@@ -106,50 +96,116 @@ class DebateOrchestrator:
             for p in participants
         ]
 
-        # Get the first participant's agent (supports custom agents)
-        participant_id = participant_ids[0]
-        agent_info = self._get_agent_info(participant_id)
-        agent = agent_info["agent"]
-        agent_name = agent_info["name"]
-        is_custom = agent_info.get("is_custom", False)
+        # For figure-vs-figure mode, we need two agents
+        if mode == "figure-vs-figure":
+            if len(participant_ids) != 2:
+                raise ValueError("Figure-vs-figure mode requires exactly 2 participants")
 
-        self.session_service = InMemorySessionService()
+            # Get both agents
+            agent_info_1 = self._get_agent_info(participant_ids[0])
+            agent_info_2 = self._get_agent_info(participant_ids[1])
 
-        # Create a runner for this agent
-        runner = Runner(
-            agent=agent,
-            app_name=self.APP_NAME,
-            session_service=self.session_service
-        )
+            self.session_service = InMemorySessionService()
 
-        # Create Google ADK session
-        adk_session = await self.session_service.create_session(
-            app_name=self.APP_NAME,
-            user_id=self.USER_ID,
-            session_id=session_id
-        )
+            # Create runners for both agents
+            runner_1 = Runner(
+                agent=agent_info_1["agent"],
+                app_name=self.APP_NAME,
+                session_service=self.session_service
+            )
+            runner_2 = Runner(
+                agent=agent_info_2["agent"],
+                app_name=self.APP_NAME,
+                session_service=self.session_service
+            )
 
-        # Store session info
-        self.debate_sessions[session_id] = {
-            "id": session_id,
-            "topic": topic,
-            "participants": participant_ids,
-            "participant_id": participant_id,
-            "participant_name": agent_name,
-            "is_custom": is_custom,
-            "agent_info": agent_info,  # Store full agent info including RAG data
-            "runner": runner,
-            "adk_session": adk_session,
-            "max_turns": max_turns,
-            "messages": []
-        }
+            # Create Google ADK session
+            adk_session = await self.session_service.create_session(
+                app_name=self.APP_NAME,
+                user_id=self.USER_ID,
+                session_id=session_id
+            )
 
-        return {
-            "session_id": session_id,
-            "topic": topic,
-            "participants": participant_ids,
-            "participant_name": agent_name
-        }
+            # Store session info for figure-vs-figure
+            self.debate_sessions[session_id] = {
+                "id": session_id,
+                "topic": topic,
+                "participants": participant_ids,
+                "mode": mode,
+                "agents": [
+                    {
+                        "id": participant_ids[0],
+                        "name": agent_info_1["name"],
+                        "info": agent_info_1,
+                        "runner": runner_1,
+                        "is_custom": agent_info_1.get("is_custom", False)
+                    },
+                    {
+                        "id": participant_ids[1],
+                        "name": agent_info_2["name"],
+                        "info": agent_info_2,
+                        "runner": runner_2,
+                        "is_custom": agent_info_2.get("is_custom", False)
+                    }
+                ],
+                "adk_session": adk_session,
+                "max_turns": max_turns,
+                "messages": [],
+                "evaluations": [],
+                "current_speaker": 0 
+            }
+
+            return {
+                "session_id": session_id,
+                "topic": topic,
+                "participants": participant_ids,
+                "participant_name": f"{agent_info_1['name']} vs {agent_info_2['name']}",
+                "mode": mode
+            }
+        else:
+            participant_id = participant_ids[0]
+            agent_info = self._get_agent_info(participant_id)
+            agent = agent_info["agent"]
+            agent_name = agent_info["name"]
+            is_custom = agent_info.get("is_custom", False)
+
+            self.session_service = InMemorySessionService()
+
+            runner = Runner(
+                agent=agent,
+                app_name=self.APP_NAME,
+                session_service=self.session_service
+            )
+
+            adk_session = await self.session_service.create_session(
+                app_name=self.APP_NAME,
+                user_id=self.USER_ID,
+                session_id=session_id
+            )
+
+            self.debate_sessions[session_id] = {
+                "id": session_id,
+                "topic": topic,
+                "participants": participant_ids,
+                "participant_id": participant_id,
+                "participant_name": agent_name,
+                "is_custom": is_custom,
+                "agent_info": agent_info,
+                "runner": runner,
+                "adk_session": adk_session,
+                "max_turns": max_turns,
+                "mode": mode,
+                "messages": [],
+                "evaluations": [] 
+            }
+
+            return {
+                "session_id": session_id,
+                "topic": topic,
+                "participants": participant_ids,
+                "participant_name": agent_name,
+                "mode": mode
+            }
 
     def get_session(self, session_id: str) -> Optional[Dict]:
         """Get a debate session by ID."""
@@ -249,6 +305,108 @@ class DebateOrchestrator:
             "timestamp": datetime.now().isoformat(),
             "audio_url": audio_url
         }
+
+    async def generate_figure_turn(self, session_id: str) -> Dict:
+        """Generate the next turn in a figure-vs-figure debate."""
+        session_data = self.debate_sessions.get(session_id)
+        if not session_data:
+            raise ValueError(f"Session {session_id} not found")
+
+        if session_data.get("mode") != "figure-vs-figure":
+            raise ValueError("This method is only for figure-vs-figure debates")
+
+        # Check if debate has reached max turns
+        max_turns = session_data.get("max_turns", 10)
+        messages = session_data["messages"]
+        current_message_count = len(messages)
+
+        # max_turns represents exchanges, so max messages = max_turns * 2
+        max_messages = max_turns * 2
+
+        if current_message_count >= max_messages:
+            raise ValueError(f"Debate has reached maximum turns ({max_turns} exchanges = {max_messages} messages)")
+
+        agents = session_data["agents"]
+        current_speaker_idx = session_data["current_speaker"]
+        current_agent = agents[current_speaker_idx]
+        opponent_idx = 1 - current_speaker_idx
+        opponent_agent = agents[opponent_idx]
+
+        topic = session_data["topic"]
+
+        # Build context from previous messages
+        context = ""
+        if messages:
+            last_message = messages[-1]
+            context = f"\n\nYour opponent ({opponent_agent['name']}) just said: {last_message['content']}\n\nPlease respond to their argument."
+        else:
+            context = f"\n\nYou are debating against {opponent_agent['name']}. Please make your opening statement."
+
+        # Create prompt for current speaker
+        prompt = f"""You are debating the topic: '{topic}'{context}
+
+Please present your argument. Stay in character and engage directly with the topic and any previous points made."""
+
+        # Create message content
+        new_message = types.Content(
+            role="user",
+            parts=[types.Part(text=prompt)]
+        )
+
+        # Get AI response
+        response_text = ""
+        runner = current_agent["runner"]
+
+        # Update RAG context if custom agent
+        if current_agent.get("is_custom") and "agent_data" in current_agent["info"]:
+            logger.info(f"Updating RAG context for custom agent: {current_agent['name']}")
+            CustomAgentFactory.update_agent_context(
+                current_agent["info"]["agent_data"],
+                prompt
+            )
+
+        logger.info(f"{current_agent['name']} is generating response...")
+
+        async for event in runner.run_async(
+            user_id=self.USER_ID,
+            session_id=session_id,
+            new_message=new_message
+        ):
+            if hasattr(event, 'content') and event.content:
+                if hasattr(event.content, 'parts'):
+                    for part in event.content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            response_text += part.text
+            elif hasattr(event, 'text') and event.text:
+                response_text += event.text
+
+        logger.info(f"{current_agent['name']} responded: {response_text[:100]}...")
+
+        # Generate audio for the response
+        audio_url = None
+        try:
+            audio_url = tts_service.generate_speech(response_text.strip(), current_agent["id"])
+            logger.info(f"Generated audio URL: {audio_url}")
+        except Exception as e:
+            logger.error(f"Failed to generate audio: {e}")
+
+        # Store the message
+        message_data = {
+            "id": str(uuid.uuid4()),
+            "speaker_id": current_agent["id"],
+            "speaker_name": current_agent["name"],
+            "role": "participant",
+            "content": response_text.strip(),
+            "timestamp": datetime.now().isoformat(),
+            "turn_number": len(messages) + 1,
+            "audio_url": audio_url
+        }
+        session_data["messages"].append(message_data)
+
+        # Switch to the other speaker for next turn
+        session_data["current_speaker"] = opponent_idx
+
+        return message_data
 
     async def run_session(self, runner_instance: Runner, user_queries: list[str] | str = None, session_name: str = "default", session_service: InMemorySessionService = None):
         print(f"\n ### Session: {session_name}")

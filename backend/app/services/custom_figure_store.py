@@ -1,7 +1,3 @@
-"""
-Persistence layer for custom historical figures.
-Stores figure metadata and manages custom agent instances.
-"""
 import json
 import os
 from typing import Dict, List, Optional
@@ -12,15 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class CustomFigureStore:
-    """Store and manage custom historical figures."""
-
+    
     def __init__(self, storage_dir: str = "app/data/custom_figures"):
-        """
-        Initialize the custom figure store.
-
-        Args:
-            storage_dir: Directory to store custom figure data
-        """
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.figures_file = self.storage_dir / "figures.json"
@@ -152,5 +141,5 @@ class CustomFigureStore:
         return figure_id in self.custom_agents
 
 
-# Global store instance
+
 custom_figure_store = CustomFigureStore()

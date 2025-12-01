@@ -62,7 +62,6 @@ def create_hitler_agent() -> Agent:
     """Create and return the Hitler historical agent (educational purposes)."""
     import os
 
-    # Set API key as environment variable for Google ADK
     os.environ['GOOGLE_API_KEY'] = settings.google_api_key
 
     agent = Agent(
@@ -74,5 +73,4 @@ def create_hitler_agent() -> Agent:
 
     return agent
 
-# Export the agent instance
 hitler_agent = create_hitler_agent()

@@ -1,7 +1,7 @@
 """
 Data models for DebateIQ application.
 """
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
@@ -60,25 +60,32 @@ class DebateMessage(BaseModel):
     content: str
     timestamp: datetime
     turn_number: int
-    audio_url: Optional[str] = None  # URL to audio file for text-to-speech
+    audio_url: Optional[str] = None 
+
+class DebateMode(str, Enum):
+    """Mode of debate."""
+    USER_VS_FIGURE = "user-vs-figure"
+    FIGURE_VS_FIGURE = "figure-vs-figure"
 
 class DebateSession(BaseModel):
     """A debate session."""
     id: str
     topic: str
-    participants: List[str]  # List of figure IDs
-    status: str  # 'waiting', 'active', 'completed'
+    participants: List[str]
+    status: str 
     created_at: datetime
     updated_at: datetime
     messages: List[DebateMessage] = []
     current_turn: int = 0
     max_turns: int = 10
+    mode: Optional[DebateMode] = DebateMode.USER_VS_FIGURE
 
 class CreateDebateRequest(BaseModel):
     """Request to create a new debate."""
     topic: str
-    participants: List[str]  # Can be FigureId values or custom figure IDs
+    participants: List[str] 
     max_turns: Optional[int] = 10
+    mode: Optional[DebateMode] = DebateMode.USER_VS_FIGURE
 
 class DebateResponse(BaseModel):
     """Response containing debate information."""
@@ -91,6 +98,23 @@ class StreamedMessage(BaseModel):
     speaker_id: str
     speaker_name: str
     content: str
-    type: str  # 'message', 'status', 'error', 'complete'
+    type: str  
     timestamp: datetime
-    audio_url: Optional[str] = None  # URL to audio file for text-to-speech
+    audio_url: Optional[str] = None 
+
+
+class JudgeEvaluationRequest(BaseModel):
+    """Request for judge to evaluate a debate exchange."""
+    session_id: str
+    user_argument: str
+    ai_argument: str
+
+
+class JudgeEvaluationResponse(BaseModel):
+    """Response from judge evaluation."""
+    user_scores: Dict
+    ai_scores: Dict
+    fact_checks: List[Dict]
+    reasoning: Dict
+    winner: str
+    winner_reason: str

@@ -45,9 +45,8 @@ class RAGKnowledgeBase:
                 loader = WikipediaLoader(query=t, load_max_docs=load_max_docs)
                 docs = loader.load()
                 all_docs.extend(docs)
-                logger.info(f"✓ Loaded Wikipedia docs for: {t}")
             except Exception as e:
-                logger.warning(f"✗ Failed to load {t}: {e}")
+                logger.warning(f"Failed to load {t}: {e}")
 
         if not all_docs:
             logger.error(f"No Wikipedia documents found for {topic}")
@@ -63,7 +62,6 @@ class RAGKnowledgeBase:
         embeddings = HuggingFaceEmbeddings()
         vectorstore = FAISS.from_documents(splits, embeddings)
 
-        logger.info(f"✅ RAG knowledge base created: {len(splits)} chunks indexed")
         return vectorstore
 
 
@@ -157,8 +155,6 @@ Always respond as {figure_name} would, drawing from the historical context provi
             tools=[]
         )
 
-        logger.info(f"✅ Custom agent created: {figure_name}")
-
         return {
             "agent": agent,
             "vectorstore": vectorstore,
@@ -208,7 +204,6 @@ Always respond as {figure_name} would, drawing from the historical context provi
             message
         )
 
-        # Update the agent's instruction with context
         base_prompt = agent_data["system_prompt_template"]
         updated_prompt = base_prompt.replace("{context}", context)
 

@@ -60,10 +60,13 @@ export interface DebateSession {
   max_turns?: number;
 }
 
+export type DebateMode = 'user-vs-figure' | 'figure-vs-figure';
+
 export interface CreateDebateRequest {
   topic: string;
   participants: string[];
   max_turns?: number;
+  mode?: DebateMode;
 }
 
 export interface CreateDebateResponse {
@@ -83,5 +86,46 @@ export interface StreamedDebateMessage {
   timestamp?: string;
   turn_number?: number;
   message?: string;
-  audio_url?: string;  // URL to audio file for AI voice
+  audio_url?: string;
+}
+
+// Judge Evaluation Types
+export interface Scores {
+  logic: number;
+  factual_accuracy: number;
+  rhetoric: number;
+  relevance: number;
+  rebuttal: number;
+  total: number;
+}
+
+export interface FactCheck {
+  claim: string;
+  source: 'user' | 'ai';
+  verdict: 'true' | 'false' | 'partially true' | 'uncertain';
+  evidence: string;
+}
+
+export interface EvaluationReasoning {
+  user_analysis: string;
+  ai_analysis: string;
+  key_strengths: string;
+  key_weaknesses: string;
+}
+
+export interface JudgeEvaluation {
+  user_scores: Scores;
+  ai_scores: Scores;
+  fact_checks: FactCheck[];
+  reasoning: EvaluationReasoning;
+  winner: 'user' | 'ai' | 'tie';
+  winner_reason: string;
+}
+
+export interface CumulativeScores {
+  user_cumulative_score: number;
+  ai_cumulative_score: number;
+  overall_winner: 'user' | 'ai' | 'tie';
+  score_difference: number;
+  exchanges_evaluated: number;
 }

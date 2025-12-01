@@ -67,7 +67,6 @@ def create_moderator_agent() -> Agent:
     """Create and return the debate moderator agent."""
     import os
 
-    # Set API key as environment variable for Google ADK
     os.environ['GOOGLE_API_KEY'] = settings.google_api_key
 
     agent = Agent(
@@ -79,5 +78,4 @@ def create_moderator_agent() -> Agent:
 
     return agent
 
-# Export the agent instance
 moderator_agent = create_moderator_agent()

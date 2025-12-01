@@ -6,7 +6,7 @@ import ErrorMessage from './components/ErrorMessage'
 import DebateArena from './components/DebateArena'
 import DebateSetup from './components/DebateSetup'
 import CreateCustomFigure from './components/CreateCustomFigure'
-import { Figure, BackendStatus } from './types'
+import { Figure, BackendStatus, DebateMode } from './types'
 import apiService from './services/api'
 
 type AppView = 'selection' | 'setup' | 'debate' | 'create-custom';
@@ -15,6 +15,7 @@ interface DebateConfig {
   sessionId: string;
   topic: string;
   participants: string[];
+  mode: DebateMode;
 }
 
 function App() {
@@ -51,7 +52,7 @@ function App() {
     setCurrentView('setup');
   };
 
-  const handleStartDebate = async (topic: string, participants: string[], maxTurns: number) => {
+  const handleStartDebate = async (topic: string, participants: string[], maxTurns: number, mode: DebateMode) => {
     setCreatingDebate(true);
     setError(null);
 
@@ -60,13 +61,15 @@ function App() {
       const response = await apiService.createDebate({
         topic,
         participants,
-        max_turns: maxTurns
+        max_turns: maxTurns,
+        mode
       });
 
       setDebateConfig({
         sessionId: response.session.session_id,
         topic: response.session.topic,
-        participants: response.session.participants
+        participants: response.session.participants,
+        mode
       });
 
       setCurrentView('debate');
@@ -123,6 +126,7 @@ function App() {
         sessionId={debateConfig.sessionId}
         topic={debateConfig.topic}
         participants={debateConfig.participants}
+        mode={debateConfig.mode}
         onBack={handleBackToSelection}
       />
     );
@@ -141,12 +145,11 @@ function App() {
 
   // Show figure selection view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 relative overflow-hidden">
-      {/* Animated background */}
+    <div className="min-h-screen bg-gradient-to-br from-[#2C2520] via-[#3D3530] to-[#2C2520] relative overflow-hidden">
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '700ms' }}></div>
-        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1000ms' }}></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-[#D2A679] rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-10 w-72 h-72 bg-[#C19A6B] rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '700ms' }}></div>
+        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-[#A67C52] rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style={{ animationDelay: '1000ms' }}></div>
       </div>
 
       <div className="relative z-10">
@@ -156,7 +159,7 @@ function App() {
           {loading && <LoadingSpinner />}
           {error && <ErrorMessage message={error} />}
           {creatingDebate && (
-            <div className="text-center text-purple-300 mb-4">
+            <div className="text-center text-[#D4C5A9] mb-4">
               <LoadingSpinner />
               <p className="mt-4">Creating debate session...</p>
             </div>
@@ -165,22 +168,22 @@ function App() {
           {!loading && !error && (
             <>
               <div className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4">
+                <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F7F2E1] to-[#F1D3B2] mb-4">
                   Select Historical Figures for Your Debate
                 </h1>
-                <p className="text-slate-400 mb-6">
+                <p className="text-[#D4C5A9] mb-6">
                   Choose your participants and let AI agents engage in an intellectual battle
                 </p>
                 <div className="flex justify-center space-x-4">
                   <button
                     onClick={handleSetupDebate}
-                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
+                    className="px-8 py-3 bg-gradient-to-r from-[#D2A679] to-[#C19A6B] hover:from-[#C19A6B] hover:to-[#A67C52] rounded-lg font-semibold transition-all shadow-lg shadow-[#D2A679]/30 text-white"
                   >
                     Start New Debate
                   </button>
                   <button
                     onClick={handleCreateCustomFigure}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg font-semibold transition-all shadow-lg shadow-blue-500/30"
+                    className="px-8 py-3 bg-gradient-to-r from-[#A0522D] to-[#8B4513] hover:from-[#8B4513] hover:to-[#654321] rounded-lg font-semibold transition-all shadow-lg shadow-[#A0522D]/30 text-white"
                   >
                     Create Custom Figure
                   </button>

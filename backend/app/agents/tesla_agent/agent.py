@@ -54,7 +54,6 @@ def create_tesla_agent() -> Agent:
     """Create and return the Nikola Tesla debate agent."""
     import os
 
-    # Set API key as environment variable for Google ADK
     os.environ['GOOGLE_API_KEY'] = settings.google_api_key
 
     agent = Agent(
@@ -66,5 +65,4 @@ def create_tesla_agent() -> Agent:
 
     return agent
 
-# Export the agent instance
 tesla_agent = create_tesla_agent()

@@ -6,7 +6,9 @@ import {
   DebateMessage,
   StreamedDebateMessage,
   CreateCustomFigureRequest,
-  CustomFigureResponse
+  CustomFigureResponse,
+  JudgeEvaluation,
+  CumulativeScores
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -303,6 +305,78 @@ class ApiService {
     };
 
     return ws;
+  }
+
+  // Judge Evaluation Methods
+
+  async evaluateExchange(
+    sessionId: string,
+    userArgument: string,
+    aiArgument: string
+  ): Promise<JudgeEvaluation> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/debates/${sessionId}/evaluate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          user_argument: userArgument,
+          ai_argument: aiArgument
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to evaluate exchange:', error);
+      throw error;
+    }
+  }
+
+  async getCumulativeScores(sessionId: string): Promise<CumulativeScores> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/debates/${sessionId}/cumulative-scores`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get cumulative scores:', error);
+      throw error;
+    }
+  }
+
+  // Figure vs Figure Debate Methods
+
+  async generateNextTurn(sessionId: string): Promise<{
+    message: DebateMessage;
+    current_turn: number;
+    max_turns: number;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/debates/${sessionId}/next-turn`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to generate next turn:', error);
+      throw error;
+    }
   }
 }
 

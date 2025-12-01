@@ -52,17 +52,16 @@ def create_lincoln_agent() -> Agent:
     """Create and return the Abraham Lincoln debate agent."""
     import os
 
-    # Set API key as environment variable for Google ADK
     os.environ['GOOGLE_API_KEY'] = settings.google_api_key
 
     agent = Agent(
         model=settings.gemini_model,
         name='abraham_lincoln',
         instruction=LINCOLN_SYSTEM_PROMPT,
-        tools=[],  # Can add custom tools if needed
+        tools=[], 
     )
 
     return agent
 
-# Export the agent instance
+
 lincoln_agent = create_lincoln_agent()
